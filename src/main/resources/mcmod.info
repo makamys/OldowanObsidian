@@ -1,0 +1,16 @@
+[
+{
+  "modid": "oldowanobsidian",
+  "name": "Oldowan Obsidian",
+  "description": "Some tweaks to obsidian.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Gyro"],
+  "credits": "Gyro, myself. Asie, for encouraging me to get back into modding",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
