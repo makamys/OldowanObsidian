@@ -220,7 +220,7 @@ public class OldowanObsidian
     	    'A', shardRecipeName, 
     	    'B', Items.blaze_powder}));
     	//Arrows
-    	GameRegistry.addRecipe(new ShapedOreRecipe(new ItemStack(Items.arrow, 1), new Object[]{
+    	GameRegistry.addRecipe(new ShapedOreRecipe(new ItemStack(Items.arrow, 4), new Object[]{
     	    " H ", " S ", " F ",
     	    'H', shardRecipeName, 
     	    'S', "stickWood",

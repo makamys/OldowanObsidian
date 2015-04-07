@@ -28,8 +28,12 @@ import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 
 public class ItemMacuahuitl extends ItemSword {
-	ToolMaterial material;
+	protected ToolMaterial toolMaterial;
 	
+	@Override
+	public String getToolMaterialName() {
+		return toolMaterial.toString();
+	}
 	protected float damage = 1.0F;
 	protected final float swordDmg;
 	protected float knockbackBoost = 2.0F;
@@ -74,6 +78,8 @@ public class ItemMacuahuitl extends ItemSword {
         //this.setCreativeTab(CreativeTabs.tabCombat);
         
         efficiency = mat.getEfficiencyOnProperMaterial();
+        
+        this.toolMaterial = mat;
 	}
 	//In many cases you'll want the damage to be different from that of the tool material.
 	public ItemMacuahuitl(ToolMaterial mat, float dmg) {
@@ -120,9 +126,9 @@ public class ItemMacuahuitl extends ItemSword {
 	@Override
     public float func_150931_i()
     {
-		if(material != null)
+		if(toolMaterial != null)
 		{
-			return material.getDamageVsEntity();
+			return toolMaterial.getDamageVsEntity();
 		}
 		return this.damage;
     }

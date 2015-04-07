@@ -1,6 +1,7 @@
 package ws.zettabyte.oldowanobsidian.item;
 
 import java.util.ArrayList;
+import java.util.UUID;
 
 import org.apache.logging.log4j.Logger;
 
@@ -15,19 +16,29 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.registry.GameRegistry;
 import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.monster.EntityPigZombie;
+import net.minecraft.entity.monster.EntitySkeleton;
+import net.minecraft.entity.monster.EntityWitch;
+import net.minecraft.entity.monster.EntityZombie;
+import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
+import net.minecraft.item.Item;
 import net.minecraft.item.Item.ToolMaterial;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemAxe;
 import net.minecraft.item.ItemSpade;
+import net.minecraft.item.ItemSword;
+import net.minecraft.item.ItemTool;
 import net.minecraft.util.EntityDamageSource;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.util.EnumHelper;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.world.BlockEvent.HarvestDropsEvent;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 
@@ -54,11 +65,17 @@ public class ObsidianToolsModule {
 	//public static ItemMacuahuitl diamondMac;
 
 	public static ArrayList<ItemMacuahuitl> macuahuitls = new ArrayList<ItemMacuahuitl>(4);
+	public static ArrayList<String> skeleableMobs = new ArrayList<String>(8);
 	
 	//public static float creeperbonusMacuahuitl = 0.4F;
 	public ObsidianToolsModule(Configuration conf, Logger log) {
 		config = conf;
 		logger = log;
+
+		skeleableMobs.add(EntityZombie.class.getName());
+		skeleableMobs.add(EntityVillager.class.getName());
+		skeleableMobs.add(EntityWitch.class.getName());
+		skeleableMobs.add(EntityPigZombie.class.getName()); //Perhaps a separate wither skellie list later?
 	}
 
     public void preInit(FMLPreInitializationEvent event)
@@ -166,7 +183,7 @@ public class ObsidianToolsModule {
     {
     	final float swordConstant = 4.0F;
     	
-    	ItemMacuahuitl macuahuitl = new ItemMacuahuitl(obsidianMat, (obsidianMat.getDamageVsEntity() + swordConstant) - adjust);
+    	ItemMacuahuitl macuahuitl = new ItemMacuahuitl(mat, (mat.getDamageVsEntity() + swordConstant) - adjust);
     	macuahuitl.setUnlocalizedName(mat.toString().toLowerCase() + "_macuahuitl");
     	macuahuitl.setTextureName("oldowanobsidian:" + mat.toString().toLowerCase() + "_macuahuitl");
 
@@ -298,6 +315,40 @@ public class ObsidianToolsModule {
 					//Prevent us from killing the creeper without proper events / noises / etc
 					float newHP = (float) (event.entityLiving.getHealth() - (event.ammount * mac.getCreeperBonus()));
 					event.entityLiving.setHealth((newHP >= 0) ? newHP : 0.5F);
+				}
+			}
+		}
+	}
+	@SubscribeEvent
+	public void onLivingDeath(LivingDeathEvent event)
+	{
+		if (! (event.source instanceof EntityDamageSource)) return;
+		if (skeleableMobs.contains(event.entityLiving.getClass().getName()))
+		{
+			//Code for spawning skeleton.
+			EntityDamageSource source = (EntityDamageSource) event.source;
+			if(source.getSourceOfDamage() instanceof EntityPlayer)
+			{
+				EntityPlayer player = (EntityPlayer)(source.getSourceOfDamage());
+				String mat = null;
+				Item item = player.getHeldItem().getItem();
+				if(item instanceof ItemTool)
+				{
+					mat = ((ItemTool)item).getToolMaterialName();
+				}
+				if(item instanceof ItemSword)
+				{
+					mat = ((ItemSword)item).getToolMaterialName();
+				}
+				if(mat == null) return;
+				
+				if(mat == "BONE")
+				{
+					EntitySkeleton toSpawn = new EntitySkeleton(event.entityLiving.worldObj);
+					toSpawn.setPosition(event.entityLiving.posX, event.entityLiving.posY, event.entityLiving.posZ);
+					toSpawn.setHealth(toSpawn.getHealth()/2.0F);
+					event.entityLiving.worldObj.spawnEntityInWorld(toSpawn);
+					toSpawn.spawnExplosionParticle();
 				}
 			}
 		}
