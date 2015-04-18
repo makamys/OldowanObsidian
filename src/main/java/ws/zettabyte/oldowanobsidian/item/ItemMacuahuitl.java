@@ -4,6 +4,8 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import ws.zettabyte.oldowanobsidian.util.DamageSourcePure;
+
 import com.google.common.collect.Multimap;
 
 import net.minecraft.block.Block;
@@ -22,6 +24,8 @@ import net.minecraft.item.Item.ToolMaterial;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
 import net.minecraft.item.ItemTool;
+import net.minecraft.potion.Potion;
+import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EntityDamageSource;
 import net.minecraft.util.StatCollector;
@@ -43,7 +47,11 @@ public class ItemMacuahuitl extends ItemSword {
 	private static Field fuseTimeField = null;
 	
 	private float efficiency = 1.0F;
-
+	
+	protected ArrayList<PotionEffect> sacrificeBuffs = null; //Don't add anything? No sac behavior.
+	
+	private static DamageSourcePure sacrificeDamage = new DamageSourcePure();
+	
 	//Get the fuse time field
 	private static void doCreeperReflection(EntityCreeper creep)
 	{
@@ -207,11 +215,62 @@ public class ItemMacuahuitl extends ItemSword {
 		}
 		return false; 
 	}
+    
+    //TODO: Animate this somehow. 
 	@Override
 	public ItemStack onItemRightClick(ItemStack ourItem, World world,
 			EntityPlayer player) {
 		//return super.onItemRightClick(ourItem, world, player);
 		//No blocking.
+		
+		//Sacrifice behavior:
+		if((player != null) && (sacrificeBuffs != null) && player.isSneaking())
+		{
+			//Make sure a player on a half a heart can't suicide with this.
+			if(player.getHealth() < 0.6F) return ourItem;
+			//Loop through once to make sure we don't have any of these yet.
+			for(int i = 0; i < sacrificeBuffs.size(); ++i)
+			{
+				PotionEffect buff = sacrificeBuffs.get(i);
+				//I don't trust contains here. Sorry for the weird tricks.
+				//Try-catch is for the potential index out of bounds error.
+				try {
+					if(player.getActivePotionEffect(Potion.potionTypes[buff.getPotionID()]) != null)
+					{
+						//We already have one of the effects. Skip all this.
+						return ourItem;
+					}
+				}
+				catch(Exception e) { }
+			}
+
+			//The rest of this silliness has gone through without stopping. Now, deal damage to the player.
+			//TODO: Verify that this always bypasses armor.
+			player.attackEntityFrom(sacrificeDamage, player.getHealth()/2);
+			//MUST come before adding the buffs, otherwise we'll resist our own damage.
+			
+			//Loop through again to add 'em.
+			for(int i = 0; i < sacrificeBuffs.size(); ++i)
+			{
+				PotionEffect buff = sacrificeBuffs.get(i);
+				player.addPotionEffect(new PotionEffect(buff)); //Copy it, to be safe.
+			}
+
+			//Bone mac repair behavior.
+			if(this.toolMaterial.toString().equalsIgnoreCase("BONE"))
+			{
+				//TODO: Remove magic numbers, add static fields. Configurability, maybe?
+				int toRepair = ourItem.getItemDamage() / 2;
+				ourItem.setItemDamage(ourItem.getItemDamage() - toRepair); 
+				//TODO: Test setItemDamage to make sure it doesn't desync (do we need a packet for this?)
+			}
+			else
+			{
+				//Small damage to tool
+				ourItem.attemptDamageItem(1, this.itemRand);
+			}
+			
+		}
 		return ourItem;
 	}
 	/**
@@ -247,6 +306,22 @@ public class ItemMacuahuitl extends ItemSword {
 	}
 	public ItemMacuahuitl setCreeperBonus(float creeperBonus) {
 		this.creeperBonus = creeperBonus;
+		return this;
+	}
+	
+	public ItemMacuahuitl addBuff(PotionEffect eff)
+	{
+		//Initialize the list
+		if(sacrificeBuffs == null)
+		{
+			sacrificeBuffs = new ArrayList<PotionEffect>(3);
+		}
+		for(int i = 0; i < sacrificeBuffs.size(); ++i)
+		{
+			//No duplicates.
+			if(sacrificeBuffs.get(i).getPotionID() == eff.getPotionID()) return this; 
+		}
+		sacrificeBuffs.add(eff);
 		return this;
 	}
 }

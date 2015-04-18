@@ -1,12 +1,14 @@
 package ws.zettabyte.oldowanobsidian.item;
 
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.UUID;
 
 import org.apache.logging.log4j.Logger;
 
 import ws.zettabyte.oldowanobsidian.OldowanObsidian;
 import ws.zettabyte.oldowanobsidian.compat.TConstructCompat;
+import ws.zettabyte.oldowanobsidian.util.DamageSourcePure;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.Mod;
@@ -33,9 +35,12 @@ import net.minecraft.item.ItemAxe;
 import net.minecraft.item.ItemSpade;
 import net.minecraft.item.ItemSword;
 import net.minecraft.item.ItemTool;
+import net.minecraft.potion.Potion;
+import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.EntityDamageSource;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.common.config.Property;
 import net.minecraftforge.common.util.EnumHelper;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -65,7 +70,22 @@ public class ObsidianToolsModule {
 	//public static ItemMacuahuitl diamondMac;
 
 	public static ArrayList<ItemMacuahuitl> macuahuitls = new ArrayList<ItemMacuahuitl>(4);
+	
 	public static ArrayList<String> skeleableMobs = new ArrayList<String>(8);
+	public static int bonusSkeletonChance = 35;
+	
+	public static final int boneRepairRarity = 1; //1 in X. 0 to disable.
+	public static final float boneRepairAmt = 0.10F; //Portion of total durability rather than flat amount.
+
+	private static DamageSourcePure sacDamageSource = new DamageSourcePure();
+	
+	public static enum MACUAHUITL_STYLE {
+		KNOCKBACK, SACRIFICE;
+	}
+	
+	public static MACUAHUITL_STYLE macStyle = MACUAHUITL_STYLE.SACRIFICE;
+	
+	protected Random random = new Random();
 	
 	//public static float creeperbonusMacuahuitl = 0.4F;
 	public ObsidianToolsModule(Configuration conf, Logger log) {
@@ -115,6 +135,23 @@ public class ObsidianToolsModule {
     			ToolMaterial.STONE.getDamageVsEntity(),
     			18);
     	}
+    	
+
+		Property conf_skele = config.get("Tools", "SkeletonChance", bonusSkeletonChance);
+		conf_skele.comment = "Chance for bone tools and weapons to spawn unarmed skeletons on killing certain other mobs (0 to disable)";
+		bonusSkeletonChance = conf_skele.getInt(bonusSkeletonChance);
+		
+		Property conf_mac_style = config.get("Tools", "MacuahuitlSacrifice", true);
+		conf_mac_style.comment = "When set to true, shift-right-clicking with a Macuahuitl will harm the player and reward them with buffs.\n"
+				+ "When set to false, the Macuahuitl will have no right-click effect but have higher knockback and bonus damage to creepers.";
+		if(conf_mac_style.getBoolean(true))
+		{
+			macStyle = MACUAHUITL_STYLE.SACRIFICE;
+		}
+		else
+		{
+			macStyle = MACUAHUITL_STYLE.KNOCKBACK;
+		}
     }
     public void toolsForMat(ToolMaterial mat, Object materialItem, Object stickItem, String[] tooltipTags)
     {
@@ -179,6 +216,7 @@ public class ObsidianToolsModule {
     	toolsForMat(mat, materialItem, "stickWood", null);
     }
 
+    //"Adjust" refers to damage.
     public ItemMacuahuitl macForMat(ToolMaterial mat, Object materialItem, Object stickItem, float adjust)
     {
     	final float swordConstant = 4.0F;
@@ -187,8 +225,16 @@ public class ObsidianToolsModule {
     	macuahuitl.setUnlocalizedName(mat.toString().toLowerCase() + "_macuahuitl");
     	macuahuitl.setTextureName("oldowanobsidian:" + mat.toString().toLowerCase() + "_macuahuitl");
 
-    	macuahuitl.addTooltipLocalize("tooltip.tool.macu.flavor");
-    	macuahuitl.addTooltipLocalize("tooltip.tool.macu.info");
+    	if(this.macStyle == MACUAHUITL_STYLE.KNOCKBACK)
+    	{
+	    	macuahuitl.addTooltipLocalize("tooltip.tool.macu.flavor1");
+	    	macuahuitl.addTooltipLocalize("tooltip.tool.macu.info1");
+    	}
+    	else if(this.macStyle == MACUAHUITL_STYLE.SACRIFICE)
+    	{
+	    	macuahuitl.addTooltipLocalize("tooltip.tool.macu.flavor2");
+	    	macuahuitl.addTooltipLocalize("tooltip.tool.macu.info2");
+    	}
     	
     	macuahuitls.add(macuahuitl);
     	GameRegistry.registerItem(macuahuitl, macuahuitl.getUnlocalizedName());
@@ -223,34 +269,86 @@ public class ObsidianToolsModule {
     	toolsForMat(boneMat, Items.bone, new String[]{"tooltip.tool.bone.flavor", "tooltip.tool.bone.info"});
     	
     	//----- MACUAHUITLS -----
-    	//What the ItemSword class adds by default to tool material damage values.
-
-    	macForMat(obsidianMat, OldowanObsidian.shardRecipeName, 1.0F).setCreeperBonus(0.4F)
-    		.addTooltipLocalize("tooltip.tool.macu.obsidian.extra");
-    	macForMat(flintMat, Items.flint, 2.0F).setCreeperBonus(0.6F).setKnockbackBoost(1.8F);
-    	macForMat(boneMat, Items.bone, 2.5F).setCreeperBonus(0.4F)
-    	.addTooltipLocalize("tooltip.tool.bone.flavor").addTooltipLocalize("tooltip.tool.bone.info");
     	
+    	//Initialize these differently for different styles.
+    	if(macStyle == MACUAHUITL_STYLE.KNOCKBACK)
+    	{
+	    	macForMat(obsidianMat, OldowanObsidian.shardRecipeName, 1.0F).setCreeperBonus(0.4F)
+	    		.addTooltipLocalize("tooltip.tool.macu.obsidian.extra");
+	    	macForMat(flintMat, Items.flint, 2.0F).setCreeperBonus(0.6F).setKnockbackBoost(1.8F);
+	    	macForMat(boneMat, Items.bone, 2.5F).setCreeperBonus(0.4F)
+	    	.addTooltipLocalize("tooltip.tool.bone.flavor").addTooltipLocalize("tooltip.tool.bone.info");
+	    	
+	    	
+	    	//Do the diamond one manually because Minecraft calls it Emerald for some reason.
+	    	ItemMacuahuitl diamondMac = new ItemMacuahuitl(ToolMaterial.EMERALD, (ToolMaterial.EMERALD.getDamageVsEntity() + 4.0F) - 0.5F);
+	    	diamondMac.setUnlocalizedName("diamond_macuahuitl");
+	    	diamondMac.setTextureName("oldowanobsidian:diamond_macuahuitl");
+	    	
+	    	diamondMac.setCreeperBonus(1.0F).setKnockbackBoost(4.0F); //Homerun bat.
+	    	
+	    	diamondMac.addTooltipLocalize("tooltip.tool.macu.diamond.flavor1");
+	    	diamondMac.addTooltipLocalize("tooltip.tool.macu.diamond.info1");
+	    	
+	    	macuahuitls.add(diamondMac);
+	    	GameRegistry.registerItem(diamondMac, diamondMac.getUnlocalizedName());
+	    	GameRegistry.addRecipe(new ShapedOreRecipe(new ItemStack(diamondMac, 1), new Object[]{
+	    	    "HSH", 
+	    	    "HSH", 
+	    	    " S ",
+	    	    'H', Items.diamond, 
+	    	    'S', "stickWood"}));
+    	}
+    	else
+    	{
+    		float lowKnockback = 1.1F;
+    		float lowCreeperDamage = 0.2F;
+    		//600 ticks is 30 seconds. TODO: Confirm this is in ticks.
+	    	macForMat(obsidianMat, OldowanObsidian.shardRecipeName, 1.0F).setCreeperBonus(lowCreeperDamage)
+	    	.setKnockbackBoost(lowKnockback).addTooltipLocalize("tooltip.tool.macu.obsidian.extra")
+    		.addBuff(new PotionEffect(Potion.digSpeed.getId(),600, 0))
+    		.addBuff(new PotionEffect(Potion.damageBoost.getId(),80, 1))
+    		.addBuff(new PotionEffect(Potion.resistance.getId(),600, 0));
+	    	
+	    	macForMat(flintMat, Items.flint, 2.0F).setCreeperBonus(0.2F).setKnockbackBoost(1.0F)
+    		.addBuff(new PotionEffect(Potion.digSpeed.getId(),600, 0))
+    		.addBuff(new PotionEffect(Potion.damageBoost.getId(),80, 0))
+    		.addBuff(new PotionEffect(Potion.fireResistance.getId(),100, 0));
+	    	
+	    	macForMat(boneMat, Items.bone, 2.5F).setCreeperBonus(0.2F).setKnockbackBoost(1.0F)
+	    	.addTooltipLocalize("tooltip.tool.bone.flavor").addTooltipLocalize("tooltip.tool.bone.info")
+    		.addBuff(new PotionEffect(Potion.damageBoost.getId(),60, 2))
+    		.addBuff(new PotionEffect(Potion.resistance.getId(),100, 3))
+    		.addBuff(new PotionEffect(Potion.regeneration.getId(),600, 0))
+    		.addBuff(new PotionEffect(Potion.nightVision.getId(),600, 0));
+	    	
+	    	
+	    	//Do the diamond one manually because Minecraft calls it Emerald for some reason.
+	    	ItemMacuahuitl diamondMac = new ItemMacuahuitl(ToolMaterial.EMERALD, (ToolMaterial.EMERALD.getDamageVsEntity() + 4.0F) - 0.5F);
+	    	diamondMac.setUnlocalizedName("diamond_macuahuitl");
+	    	diamondMac.setTextureName("oldowanobsidian:diamond_macuahuitl");
+	    	
+	    	diamondMac.setCreeperBonus(0.4F).setKnockbackBoost(2.5F); //Homerun bat.
+	    	
+	    	diamondMac.addTooltipLocalize("tooltip.tool.macu.diamond.flavor2");
+	    	diamondMac.addTooltipLocalize("tooltip.tool.macu.diamond.info2");
+	    	
+	    	diamondMac
+	    	.addBuff(new PotionEffect(Potion.damageBoost.getId(),140, 1))
+    		.addBuff(new PotionEffect(Potion.digSpeed.getId(),600, 1))
+    		.addBuff(new PotionEffect(Potion.resistance.getId(),600, 1))
+    		.addBuff(new PotionEffect(Potion.moveSpeed.getId(),400, 0));
+	    	
+	    	macuahuitls.add(diamondMac);
+	    	GameRegistry.registerItem(diamondMac, diamondMac.getUnlocalizedName());
+	    	GameRegistry.addRecipe(new ShapedOreRecipe(new ItemStack(diamondMac, 1), new Object[]{
+	    	    "HSH", 
+	    	    "HSH", 
+	    	    " S ",
+	    	    'H', Items.diamond, 
+	    	    'S', "stickWood"}));
+    	}
     	
-    	//Do the diamond one manually because Minecraft calls it Emerald for some reason.
-    	ItemMacuahuitl diamondMac = new ItemMacuahuitl(ToolMaterial.EMERALD, (ToolMaterial.EMERALD.getDamageVsEntity() + 4.0F) - 0.5F);
-    	diamondMac.setUnlocalizedName("diamond_macuahuitl");
-    	diamondMac.setTextureName("oldowanobsidian:diamond_macuahuitl");
-    	
-    	diamondMac.setCreeperBonus(1.0F).setKnockbackBoost(4.0F); //Homerun bat.
-    	
-    	diamondMac.addTooltipLocalize("tooltip.tool.macu.diamond.flavor");
-    	diamondMac.addTooltipLocalize("tooltip.tool.macu.diamond.info");
-    	
-    	macuahuitls.add(diamondMac);
-    	GameRegistry.registerItem(diamondMac, diamondMac.getUnlocalizedName());
-    	GameRegistry.addRecipe(new ShapedOreRecipe(new ItemStack(diamondMac, 1), new Object[]{
-    	    "HSH", 
-    	    "HSH", 
-    	    " S ",
-    	    'H', Items.diamond, 
-    	    'S', "stickWood"}));
-
     	//Hella introns follow:
     	// -- OBSIDIAN
     	/*obsidianPick = new ItemModPick(obsidianMat);
@@ -302,11 +400,13 @@ public class ObsidianToolsModule {
 	public void onLivingAttack(LivingAttackEvent event)
 	{
 		if (! (event.source instanceof EntityDamageSource)) return;
+		if (! (macStyle == MACUAHUITL_STYLE.KNOCKBACK)) return; //No need for onhits with sacrifice style.
 		EntityDamageSource source = (EntityDamageSource) event.source;
 		if(source.getSourceOfDamage() instanceof EntityPlayer)
 		{
 			EntityPlayer attacker = (EntityPlayer) source.getSourceOfDamage();
-			if( attacker.getCurrentEquippedItem().getItem() instanceof ItemMacuahuitl )
+			if( (attacker.getCurrentEquippedItem() != null) && 
+					(attacker.getCurrentEquippedItem().getItem() instanceof ItemMacuahuitl ))
 			{
 				ItemMacuahuitl mac = (ItemMacuahuitl)attacker.getCurrentEquippedItem().getItem();
 				//Respect invulnerability frames.
@@ -319,37 +419,49 @@ public class ObsidianToolsModule {
 			}
 		}
 	}
+	//Bone weapon skeleton spawn & repair-on-kill behavior.
 	@SubscribeEvent
 	public void onLivingDeath(LivingDeathEvent event)
 	{
 		if (! (event.source instanceof EntityDamageSource)) return;
-		if (skeleableMobs.contains(event.entityLiving.getClass().getName()))
+		if (! (event.source.getSourceOfDamage() instanceof EntityPlayer)) return;
+		EntityPlayer player = (EntityPlayer)(event.source.getSourceOfDamage());
+		String mat = null;
+		ItemStack stack = player.getHeldItem();
+		Item item = stack.getItem();
+		
+		int swordAdj = 0;
+		if(item instanceof ItemTool)
+		{
+			mat = ((ItemTool)item).getToolMaterialName();
+		}
+		if(item instanceof ItemSword)
+		{
+			mat = ((ItemSword)item).getToolMaterialName();
+			swordAdj = 1;
+		}
+		if((mat != null) && (mat == "BONE"))
 		{
 			//Code for spawning skeleton.
-			EntityDamageSource source = (EntityDamageSource) event.source;
-			if(source.getSourceOfDamage() instanceof EntityPlayer)
+			if (skeleableMobs.contains(event.entityLiving.getClass().getName()))
 			{
-				EntityPlayer player = (EntityPlayer)(source.getSourceOfDamage());
-				String mat = null;
-				Item item = player.getHeldItem().getItem();
-				if(item instanceof ItemTool)
+				if((bonusSkeletonChance != 0) && (random.nextInt(100) <= bonusSkeletonChance))
 				{
-					mat = ((ItemTool)item).getToolMaterialName();
+						EntitySkeleton toSpawn = new EntitySkeleton(event.entityLiving.worldObj);
+						toSpawn.setPosition(event.entityLiving.posX, event.entityLiving.posY, event.entityLiving.posZ);
+						toSpawn.setHealth(toSpawn.getHealth()/2.0F);
+						event.entityLiving.worldObj.spawnEntityInWorld(toSpawn);
+						toSpawn.spawnExplosionParticle();
 				}
-				if(item instanceof ItemSword)
-				{
-					mat = ((ItemSword)item).getToolMaterialName();
-				}
-				if(mat == null) return;
+			}
+			//Code for repairing bone tools on kill.
+			if((boneRepairRarity != 0) && (random.nextInt(boneRepairRarity + swordAdj) == 0))
+			{
+				int missing = stack.getItemDamage();
+				int restore = (int) Math.ceil((float)stack.getMaxDamage() * boneRepairAmt) + swordAdj;
+				if(restore > missing) restore = missing; //Clamp it.
 				
-				if(mat == "BONE")
-				{
-					EntitySkeleton toSpawn = new EntitySkeleton(event.entityLiving.worldObj);
-					toSpawn.setPosition(event.entityLiving.posX, event.entityLiving.posY, event.entityLiving.posZ);
-					toSpawn.setHealth(toSpawn.getHealth()/2.0F);
-					event.entityLiving.worldObj.spawnEntityInWorld(toSpawn);
-					toSpawn.spawnExplosionParticle();
-				}
+				stack.setItemDamage(missing - restore);
 			}
 		}
 	}

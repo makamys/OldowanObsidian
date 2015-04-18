@@ -24,14 +24,21 @@ item.flint_axe.name=Flint Axe
 item.bone_axe.name=Bone Axe
 item.diamond_axe.name=Diamond Axe
 
-tooltip.tool.macu.flavor=[Brutal]
-tooltip.tool.macu.info=Bonus knockback & damage to creepers
-tooltip.tool.macu.diamond.flavor=[Home-Run Bat]
-tooltip.tool.macu.diamond.info=Bonus knockback & damage to creepers
+tooltip.tool.macu.flavor1=[Brutal]
+tooltip.tool.macu.info1=Bonus knockback & damage to creepers
+tooltip.tool.macu.diamond.flavor1=[Home-Run Bat]
+tooltip.tool.macu.diamond.info1=Bonus knockback & damage to creepers
+
+tooltip.tool.macu.flavor2=[Ceremonial]
+tooltip.tool.macu.info2=Right-click to receive buffs at the cost of half of your current health.
+tooltip.tool.macu.diamond.flavor2=[Home-Run Bat]
+tooltip.tool.macu.diamond.info2=Bonus knockback. Right-click to receive buffs at the cost of health.
 
 tooltip.tool.macu.obsidian.extra=§o"This belongs in a museum!"§r
 
 tooltip.tool.obsidian.info=Primitive but durable
 
 tooltip.tool.bone.flavor=[Spooky]
-tooltip.tool.bone.info=The restless dead stir...
+tooltip.tool.bone.info=Repaired with blood. Stirs the restless dead.
+
+death.attack.Pure=Armor can't help you now, %1$s 

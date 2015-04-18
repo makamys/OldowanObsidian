@@ -14,6 +14,7 @@ import ws.zettabyte.oldowanobsidian.item.ItemModPick;
 import ws.zettabyte.oldowanobsidian.item.MultiItem;
 import ws.zettabyte.oldowanobsidian.item.ObsidianToolsModule;
 import ws.zettabyte.oldowanobsidian.item.SubItem;
+import ws.zettabyte.oldowanobsidian.world.BlackGravelWorldgen;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.creativetab.CreativeTabs;
@@ -66,19 +67,21 @@ public class OldowanObsidian
 	public static ItemStack shardStack;
 	
 	public static BlockBlackGravel blackGravel = new BlockBlackGravel();
+	public static int gravelChancePerChunk = 24;
 	
 	
 	public static boolean compatTCon = true;
 	
 	public static boolean forceBreakRecipe = false;
 	public static boolean easyShards = false;
-	
+
 	public static boolean useTools = true;
+	public static boolean doWorldgen = true;
 	
 	public static String shardRecipeName;
 	
 	public static ObsidianToolsModule  toolModule = null;
-
+	
     public OldowanObsidian() {
     	instance = this;
 	}
@@ -92,8 +95,10 @@ public class OldowanObsidian
 		conf_toolMod.comment = "Enable or disable tool module. Includes obsidian tools, flint tools, spears, macuahutils.";
 		useTools = conf_toolMod.getBoolean(true);
 		
-		compatTCon = config.get("Compatibility", "Enable Tinker's Construct compat", true).getBoolean(true);
-
+		Property conf_tcon = config.get("Compatibility", "TCOn", true);
+		conf_tcon.comment = "Registers OO obsidian shards as an equivalent of TCon obsidian shards.";
+		compatTCon = conf_tcon.getBoolean(true);
+		
 		Property conf_eShard = config.get("Compatibility", "EasyShards", false);
 		conf_eShard.comment = "Get more shards when breaking Obsidian. WARNING: Infinite Obsidian exploit when enabled with TCon!";
 		easyShards = conf_eShard.getBoolean(false);
@@ -109,6 +114,13 @@ public class OldowanObsidian
 		conf_fB.comment = "Force-enable obsidian-breaking recipe (even when the harvest changes are enabled)";
 		forceBreakRecipe = conf_fB.getBoolean(false);
 		
+		doWorldgen = config.get("Modules", "BlackGravelWorldgen", doWorldgen).getBoolean(doWorldgen);
+		if(doWorldgen)
+		{
+			Property conf_genchance = config.get("World", "BlackGravelRarity", gravelChancePerChunk);
+			conf_genchance.comment = "Chance per chunk to generate a black gravel cluster is 1/this";
+			gravelChancePerChunk = conf_genchance.getInt(gravelChancePerChunk);
+		}
 		config.save();
 		
 		//Little sanity checks
@@ -179,6 +191,11 @@ public class OldowanObsidian
 		if(useTools)
 		{
 			toolModule.init(event);
+		}
+		
+		if(doWorldgen)
+		{
+			GameRegistry.registerWorldGenerator(new BlackGravelWorldgen(), 9999);
 		}
     }
     
