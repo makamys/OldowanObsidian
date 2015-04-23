@@ -20,6 +20,7 @@ import cpw.mods.fml.common.registry.GameRegistry;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.monster.EntityCreeper;
 import net.minecraft.entity.monster.EntityPigZombie;
 import net.minecraft.entity.monster.EntitySkeleton;
 import net.minecraft.entity.monster.EntityWitch;
@@ -401,6 +402,9 @@ public class ObsidianToolsModule {
 	{
 		if (! (event.source instanceof EntityDamageSource)) return;
 		if (! (macStyle == MACUAHUITL_STYLE.KNOCKBACK)) return; //No need for onhits with sacrifice style.
+		if (event.entityLiving == null ) return;
+		if (!(event.entityLiving instanceof EntityCreeper)) return;
+		
 		EntityDamageSource source = (EntityDamageSource) event.source;
 		if(source.getSourceOfDamage() instanceof EntityPlayer)
 		{
