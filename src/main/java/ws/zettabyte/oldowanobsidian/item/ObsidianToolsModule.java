@@ -431,9 +431,13 @@ public class ObsidianToolsModule {
 		if (! (event.source.getSourceOfDamage() instanceof EntityPlayer)) return;
 		EntityPlayer player = (EntityPlayer)(event.source.getSourceOfDamage());
 		String mat = null;
+
 		ItemStack stack = player.getHeldItem();
+		if(stack == null) return;
+
 		Item item = stack.getItem();
-		
+        if(item == null) return;
+
 		int swordAdj = 0;
 		if(item instanceof ItemTool)
 		{

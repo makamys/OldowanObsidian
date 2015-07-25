@@ -30,21 +30,22 @@ repositories {
 
 dependencies {
 
-	compile "tconstruct:TConstruct:1.7.10-1.8.2.build857:deobf"
+	compile "tconstruct:TConstruct:1.7.10-1.8.6a.build970:deobf"
 
-	compile "mcp.mobius.waila:Waila:1.5.8a_1.7.10" //Primary purpose of WAILA is for easier testing in my dev env, hah.
-	compile "codechicken:CodeChickenCore:1.7.10-1.0.4.29:dev"
+	//compile "mcp.mobius.waila:Waila:1.5.10_1.7.10" //Primary purpose of WAILA is for easier testing in my dev env, hah.
+	//compile "codechicken:CodeChickenCore:1.7.10-1.0.7.46:dev"
+	//compile "codechicken:NotEnoughItems:1.7.10-1.0.5.111:dev"
 	compile name: 'MineTweaker3', version: "Dev-1.7.10-3.0.9B", ext: 'jar'
 
 	compile fileTree(dir: 'libs', include: '*.jar')
 }
 
-version = "0.0.1"
+version = "0.0.2"
 group= "ws.zettabyte.oldowanobsidian"
 archivesBaseName = "oldowanObsidian"
 
 minecraft {
-    version = "1.7.10-10.13.2.1343-1.7.10"
+    version = "1.7.10-10.13.4.1481-1.7.10"
     runDir = "eclipse"
 }
 

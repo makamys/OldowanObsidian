@@ -99,9 +99,18 @@ public class ItemMacuahuitl extends ItemSword {
 	public void addInformation(ItemStack itemstack, EntityPlayer entityplayer, List list, boolean flag)
 	{
 		super.addInformation(itemstack, entityplayer, list, flag);
+        final int lineMax = 36;
 		for(int i = 0; i < extraInfo.size(); ++i)
 		{
-			list.add(extraInfo.get(i));
+			for(int stringpos = 0; stringpos < extraInfo.get(i).length(); stringpos += lineMax) {
+                int end = stringpos + lineMax;
+                if(end > extraInfo.get(i).length())
+                {
+                    end = extraInfo.get(i).length();
+                }
+                list.add(extraInfo.get(i).substring(stringpos, end));
+            }
+			//list.add(extraInfo.get(i));
 		}
 	}
 	public ItemMacuahuitl addTooltip(String str)
