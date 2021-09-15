@@ -57,17 +57,16 @@ processResources
     def buildnum = 0
     def versionPropsFile = file('version.properties')
 
-    if (versionPropsFile.canRead()) {
-    	def Properties versionProps = new Properties()
-    	versionProps.load(new FileInputStream(versionPropsFile))
+	def Properties versionProps = new Properties()
+	versionProps['BUILD_NUMBER'] = buildnum.toString()
 
-    	buildnum = versionProps['BUILD_NUMBER'].toInteger() + 1
-    	versionProps['BUILD_NUMBER']=buildnum.toString()
-    	versionProps.store(versionPropsFile.newWriter(), null)
-    }
-    else {
-    	throw new GradleException("Could not read version.properties!")
-    } 
+    if (versionPropsFile.canRead()) {
+    	versionProps.load(new FileInputStream(versionPropsFile))
+	}
+
+	buildnum = versionProps['BUILD_NUMBER'].toInteger() + 1
+	versionProps['BUILD_NUMBER']=buildnum.toString()
+	versionProps.store(versionPropsFile.newWriter(), null)
 
     // this will ensure that this task is redone when the versions change.
     inputs.property "version", project.version + "." + buildnum.toString()
